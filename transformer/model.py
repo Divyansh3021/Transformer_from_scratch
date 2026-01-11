@@ -10,6 +10,7 @@ class ModelArgs:
         self.max_seq_len = 1024   # Context length
         self.dropout = 0.1
         self.num_heads = 1
+        self.n_layer = 1
 
 class TransformerEmbeddings(nn.Module):
     def __init__(self, args):
@@ -22,6 +23,8 @@ class TransformerEmbeddings(nn.Module):
         self.dropout = nn.Dropout(args.dropout)
 
     def forward(self, x):
+
+        print(x.shape)
         B, T = x.shape   # x shape: (batch_size, seq_len)
 
         positions = torch.arange(0, T, device=x.device)
@@ -229,26 +232,38 @@ class GPT(nn.Module):
 
         return idx
     
+from tokenizer import CharTokenizer
+
+data = "The quick brown fox jumps over the lazy dog. " * 10
+tokenizer = CharTokenizer(data)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 args = ModelArgs()
 args.n_layer = 4
 args.num_heads = 4
 args.d_model = 256
+args.max_seq_len = 64
+args.vocab_size = tokenizer.vocab_size
 
 model = GPT(args).to(device)
 model.eval()
 
 print(f"Using device: {device}")
 
+user_input = "hey"
 
-context = torch.zeros((1,1), dtype=torch.long, device=device)
+input_ids = tokenizer.encode(user_input)
+print(f"Input ids shape: {len(input_ids)}")
+context = torch.tensor(input_ids, dtype=torch.long, device=device).unsqueeze(0)
+print(f"Context shape: {context.shape}")
 
 print("Generating...")
-generated_ids = model.generate(context, max_new_tokens=20)
+generated_ids = model.generate(context, max_new_tokens=50)[0]
 
-print(f"Generated token IDs: {generated_ids.tolist()[0]}")
+# print(f"Generated token IDs: {generated_ids.tolist()[0]}")
 
+output = tokenizer.decode(generated_ids)
+print(f"Output: {output}")
 # print(f"Model built! Parameter count: {sum(p.numel() for p in model.parameters())}")
 
 # # Test forward pass
